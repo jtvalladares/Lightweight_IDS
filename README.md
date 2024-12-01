@@ -4,11 +4,12 @@ Code and archives associated to the development of a lightweight IDS (Intrusion 
 
 The content of folders is the following:
 
-- **Dataset:** Contiene el dataset XIIoTID utilizado y la version usada al limpiar campos vacios y otros problemas encontrados.
+- **Dataset:** Contiene el dataset XIIoTID utilizado y la version usada al limpiar campos vacios y otros problemas encontrados. Contiene conjuntos de test para cada experimento y cada clase.
 - **Feature selection results:** Contiene archivos con los resultados del experimento de seleccion de features y el codigo del experimento en Jupyter Notebook. Experimento hecho con 5-fold de entrenamiento-prueba. Cada experimento tiene tres versions, para clasificacion de 17, 9 y 2 clases. En los archivos de resultados se encuentran las metricas, las matrices de confusion y las caracteristicas en cada fold de test. Detalles del nombre de los archivos:
     - E1.x: Clasificador Decission Tree
     - E2.x: Clasificador DNN
     - E3.x: Clasificador CNN
+    - ---
     - Ex.1: Usar todas las features
     - Ex.2: Eliminar features correlacionadas
     - Ex.3: Seleccionar features con RFECV (Recursive Feature Elimination with Cross-Validation)
