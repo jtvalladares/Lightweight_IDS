@@ -19,3 +19,4 @@ Detalles del nombre de los archivos:
 **Nota:** Los archivos grandes no se cargaron en este github.
 - dataset limpio: https://drive.google.com/file/d/1kORPJxDHyV9wI_9HTpBnUC4Ozpz6FigP/view?usp=sharing
 - dataset completo: https://drive.google.com/file/d/1EiDJ4LFZDFv_eX86dh821jkx_02_FaRI/view?usp=sharing
+- splits para test en jetson: https://drive.google.com/drive/folders/1XEGUARlzpKQ3dYe4hPvoMRQuzxT7isaG?usp=sharing
