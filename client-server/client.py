@@ -2,58 +2,97 @@ import socket
 from threading import Thread, Lock
 import pandas as pd
 import pickle
+import time
+import numpy as np
+import os
 
 class Client:
-    def __init__(self, HOST, PORT, route_csv, output_csv):
+    def __init__(self, HOST, PORT, test_directory):
         self.socket = socket.socket()
-        self.socket.connect((HOST, PORT))            
+        self.socket.connect((HOST, PORT))
 
-        self.df = pd.read_csv(route_csv)
-        self.df = self.df.drop(columns=['class1'])
-        self.output_csv = output_csv
-        self.classification_results = []
+        self.test_directory = test_directory  # Directorio con archivos .npy
 
         # Lock para controlar flujo de mensajes
         self.lock = Lock()
+        self.process_files()
 
-        self.talk_to_server()
+    def process_files(self):
+        test_files = [file for file in os.listdir(self.test_directory) if file.endswith('.npy')]
+        for file in test_files:
+            file_name = file.split('/')[-1]
 
-    def talk_to_server(self):
-        # Iniciar hilo receptor
-        Thread(target=self.receive_message, daemon=True).start()
-        # Enviar filas al servidor
-        self.send_message()
+            # Notificar al servidor sobre el nombre del archivo actual
+            self.send_file_name(file_name)
 
-    def send_message(self):
-        for _, row in self.df.iterrows():
+            # Cargar datos del archivo actual
+            data = np.load(os.path.join(self.test_directory, file), allow_pickle=True)
+
+            # Asumimos que las dos últimas columnas son etiquetas reales y predicciones de otro sistema
+            real_labels = data[:, -2]
+            other_predictions = data[:, -1]
+            data = data[:, :-2]  # Eliminar las dos últimas columnas
+
+            # Iniciar recolección de tiempos y predicciones
+            self.time_deltas = []
+            self.predictions = []
+
+            Thread(target=self.receive_predictions, daemon=True).start()
+            self.send_data(data)
+
+            # Calcular métricas al finalizar archivo
+            self.calculate_metrics(real_labels, other_predictions)
+
+    def send_file_name(self, file_name):
+        self.lock.acquire()
+        self.socket.send(pickle.dumps({"file_name": file_name}))
+        self.lock.release()
+
+    def send_data(self, data):
+        for row in data:
             self.lock.acquire()
-            # Serializar fila y enviar
-            data = pickle.dumps(row.to_dict())
-            self.socket.send(data)
+            start_time = time.time()
+            row_dict = {f"col_{i}": val for i, val in enumerate(row)}
+            serialized_data = pickle.dumps(row_dict)
+            self.socket.send(serialized_data)
+            self.time_deltas.append((start_time, None))
 
-    def receive_message(self):
+    def receive_predictions(self):
         i = 0
         while True:
-            # Recibir resultado del servidor
             data = self.socket.recv(4096)
             if not data:
                 break
 
-            classification_result = pickle.loads(data)
-            self.classification_results.append(classification_result)
+            prediction = pickle.loads(data)
+            end_time = time.time()
 
-            print(f'Received: {i+1} / {len(self.df)}')
+            # Registrar tiempo de respuesta y predicción
+            self.time_deltas[i] = (self.time_deltas[i][0], end_time)
+            self.predictions.append(prediction)
+
             i += 1
-
             self.lock.release()
 
-    def save_results(self):
-        results_df = pd.DataFrame(self.classification_results, columns=['classification_result'])
-        results_df.to_csv(self.output_csv, index=False)
-        print(f'Results saved to {self.output_csv}')
+    def calculate_metrics(self, real_labels, other_predictions):
+        # Calcular tiempo promedio
+        times = [end - start for start, end in self.time_deltas if end is not None]
+        avg_time = sum(times) / len(times) if times else 0
 
-# Example usage for client (in a separate script or thread)
-ruta_csv = '/home/javb/vscode_folder/X-IIoTID dataset/client - server/E1.3__results.pkl_class1_test.csv'
-output_csv = '/home/javb/vscode_folder/X-IIoTID dataset/client - server/classification_results.csv'
-Client('127.0.0.1', 7632, ruta_csv, output_csv)
-Client.save_results()
+        # Calcular accuracy
+        prediction_accuracy = sum(1 for p, r in zip(self.predictions, real_labels) if p == r) / len(real_labels)
+        other_accuracy = sum(1 for p, o in zip(self.predictions, other_predictions) if p == o) / len(other_predictions)
+
+        print(f"Average response time: {avg_time:.4f} seconds")
+        print(f"Prediction accuracy: {prediction_accuracy * 100:.2f}%")
+        print(f"Other system accuracy: {other_accuracy * 100:.2f}%")
+
+# Cliente
+# listar todos los archivos de test
+# def list_npy_files(directory):
+#     return [file for file in os.listdir(directory) if file.endswith('.npy')]
+
+directory_path = '/home/ubuntu2202/Desktop/datasets/X-IIoTID dataset/test_splits'
+# test_files = list_npy_files(directory_path)
+
+Client('127.0.0.1', 7632, directory_path)
