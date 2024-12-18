@@ -28,7 +28,6 @@ class Client:
             # Cargar datos del archivo actual
             data = np.load(os.path.join(self.test_directory, file), allow_pickle=True)
 
-            # Asumimos que las dos últimas columnas son etiquetas reales y predicciones de otro sistema
             real_labels = data[:, -2]
             other_predictions = data[:, -1]
             data = data[:, :-2]  # Eliminar las dos últimas columnas
