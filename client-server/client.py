@@ -32,8 +32,7 @@ class Client:
             other_predictions = data[:, -1]
             data = data[:, :-2]  # Eliminar las dos últimas columnas
 
-            # Iniciar recolección de tiempos y predicciones
-            self.time_deltas = []
+            # Iniciar recolección de predicciones
             self.predictions = []
 
             Thread(target=self.receive_predictions, daemon=True).start()
@@ -57,41 +56,25 @@ class Client:
             self.time_deltas.append((start_time, None))
 
     def receive_predictions(self):
-        i = 0
         while True:
             data = self.socket.recv(4096)
             if not data:
                 break
 
             prediction = pickle.loads(data)
-            end_time = time.time()
-
-            # Registrar tiempo de respuesta y predicción
-            self.time_deltas[i] = (self.time_deltas[i][0], end_time)
             self.predictions.append(prediction)
 
-            i += 1
             self.lock.release()
 
     def calculate_metrics(self, real_labels, other_predictions):
-        # Calcular tiempo promedio
-        times = [end - start for start, end in self.time_deltas if end is not None]
-        avg_time = sum(times) / len(times) if times else 0
-
         # Calcular accuracy
         prediction_accuracy = sum(1 for p, r in zip(self.predictions, real_labels) if p == r) / len(real_labels)
         other_accuracy = sum(1 for p, o in zip(self.predictions, other_predictions) if p == o) / len(other_predictions)
 
-        print(f"Average response time: {avg_time:.4f} seconds")
         print(f"Prediction accuracy: {prediction_accuracy * 100:.2f}%")
         print(f"Other system accuracy: {other_accuracy * 100:.2f}%")
 
 # Cliente
-# listar todos los archivos de test
-# def list_npy_files(directory):
-#     return [file for file in os.listdir(directory) if file.endswith('.npy')]
-
 directory_path = '/home/ubuntu2202/Desktop/datasets/X-IIoTID dataset/test_splits'
-# test_files = list_npy_files(directory_path)
 
 Client('127.0.0.1', 7632, directory_path)
