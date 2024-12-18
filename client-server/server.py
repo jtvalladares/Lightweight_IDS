@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import re
+import time
 from tensorflow.keras.models import load_model
 
 class Server:
@@ -11,6 +12,7 @@ class Server:
         self.model_folder = model_folder
         self.model_name = None
         self.current_model = None
+        self.times = []
 
         self.socket = socket.socket()
         self.socket.bind((HOST, PORT))
@@ -34,9 +36,18 @@ class Server:
             if isinstance(message, dict) and "file_name" in message:
                 file_name = message["file_name"]
                 self.load_model(file_name)
+                if not self.times:
+                    print("First file")
+                else:
+                    media = sum(self.times) / len(self.times)
+                    print(f"Mean time in previous file: {media}")
+                    self.times = []
             else:
                 row = message
+                start_time = time.time()
                 classification_result = self.classify_attack(row)
+                end_time = time.time()
+                self.times.append(end_time - start_time)
                 self.client_socket.send(pickle.dumps(classification_result))
 
     def load_model(self, file_name):
@@ -62,20 +73,15 @@ class Server:
         # Convertir fila a DataFrame
         df_row = pd.DataFrame([row])
         np_row = df_row.to_numpy()
-#-------------------------------------------
+
         if re.search(r'E[23]', self.model_name):
             if 'class3' in self.model_name:
-                # start_time = time.time()
-                prediction = (self.current_model.predict(np_row) > 0.5).astype(int).flatten()
+                prediction = (self.current_model.predict(np_row, verbose=0) > 0.5).astype(int).flatten()
             else:
-                # start_time = time.time()
-                prediction = np.argmax(self.current_model.predict(np_row), axis=-1)
+                prediction = np.argmax(self.current_model.predict(np_row, verbose=0), axis=-1)
         else:
-            # start_time = time.time()
-            prediction = self.current_model.predict(np_row)
-#------------------------------------
-        # Realizar predicción
-        # prediction = self.current_model.predict(np_row)
+            prediction = self.current_model.predict(np_row, verbose=0)
+
         return prediction[0]
 
 # Uso del cliente y servidor
