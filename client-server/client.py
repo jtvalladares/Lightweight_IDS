@@ -49,11 +49,9 @@ class Client:
     def send_data(self, data):
         for row in data:
             self.lock.acquire()
-            start_time = time.time()
             row_dict = {f"col_{i}": val for i, val in enumerate(row)}
             serialized_data = pickle.dumps(row_dict)
             self.socket.send(serialized_data)
-            self.time_deltas.append((start_time, None))
 
     def receive_predictions(self):
         while True:
