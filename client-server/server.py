@@ -80,7 +80,7 @@ class Server:
             else:
                 prediction = np.argmax(self.current_model.predict(np_row, verbose=0), axis=-1)
         else:
-            prediction = self.current_model.predict(np_row, verbose=0)
+            prediction = self.current_model.predict(np_row) # elimine verbose, proponer print nombre de archivo
 
         return prediction[0]
 

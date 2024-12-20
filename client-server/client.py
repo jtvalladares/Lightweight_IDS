@@ -43,6 +43,7 @@ class Client:
 
     def send_file_name(self, file_name):
         self.lock.acquire()
+        print(file_name)
         self.socket.send(pickle.dumps({"file_name": file_name}))
         self.lock.release()
 
